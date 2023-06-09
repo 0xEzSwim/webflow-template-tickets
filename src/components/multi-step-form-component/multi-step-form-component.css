@@ -1,0 +1,14 @@
+.tooltip {
+    display: inline-block;
+    position: absolute;
+    background-color: #f44336;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
+    top: 10%;
+    right: -2%;
+}
+  
