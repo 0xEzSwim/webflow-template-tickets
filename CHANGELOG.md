@@ -1,5 +1,11 @@
 # @webflow-enzo-chantereault/support-contact
 
+## 2.0.0
+
+### Major Changes
+
+- cda6b52: Email validity check and remove tooltip from dom when field is valid
+
 ## 1.0.0
 
 ### Major Changes
