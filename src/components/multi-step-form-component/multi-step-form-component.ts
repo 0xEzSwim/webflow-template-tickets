@@ -1,19 +1,30 @@
 import './multi-step-form-component.css';
 
-import { createElementFromHTML, insertAfter } from '$utils/index';
+import { createElementFromHTML, insertAfter, validateEmail } from '$utils/index';
+
+import { FieldErrorType } from './field-error-type.enum';
 
 export class MultiStepFormComponent {
   private _stepClasses: string[] = [];
   private _nextButtonClasses: string[] = [];
   private _prevButtonClasses: string[] = [];
   private _currentRequiredInputs: HTMLInputElement[] = [];
+  private _from: HTMLFormElement | null = null;
   public currentStep = 0;
 
-  constructor(stepClasses: string[], nextButtonClasses: string[], prevButtonClasses: string[]) {
+  constructor(
+    formId: string,
+    stepClasses: string[],
+    nextButtonClasses: string[],
+    prevButtonClasses: string[]
+  ) {
     this._stepClasses = stepClasses;
     this._nextButtonClasses = nextButtonClasses;
     this._prevButtonClasses = prevButtonClasses;
-
+    this._from = document.querySelector<HTMLFormElement>(formId);
+    if (!this._from) {
+      return;
+    }
     this._init();
   }
 
@@ -22,16 +33,20 @@ export class MultiStepFormComponent {
 
     this._nextButtonClasses.forEach((button, index) => {
       const nextButtonEl: HTMLButtonElement | null =
-        document.querySelector<HTMLButtonElement>(button);
+        this._from!.querySelector<HTMLButtonElement>(button);
       if (!nextButtonEl) {
         return;
       }
 
-      nextButtonEl.addEventListener('click', () => {
+      nextButtonEl.addEventListener('click', (event: MouseEvent) => {
         if (this.validateStep(this._stepClasses[index])) {
-          this.currentStep++;
-          this.showStep();
+          if (index < this._stepClasses.length - 1) {
+            this.currentStep++;
+            this.showStep();
+          }
         } else {
+          event.preventDefault();
+          event.stopPropagation();
           this._currentRequiredInputs.forEach((input) => {
             input.addEventListener('focus', () => {
               this.hideFieldError(input);
@@ -43,7 +58,7 @@ export class MultiStepFormComponent {
 
     this._prevButtonClasses.forEach((button) => {
       const prevButtonEl: HTMLButtonElement | null =
-        document.querySelector<HTMLButtonElement>(button);
+        this._from!.querySelector<HTMLButtonElement>(button);
       if (!prevButtonEl) {
         return;
       }
@@ -62,7 +77,7 @@ export class MultiStepFormComponent {
 
   private showStep(): void {
     this._stepClasses.forEach((step, index) => {
-      const divEl: HTMLDivElement | null = document.querySelector<HTMLDivElement>(step);
+      const divEl: HTMLDivElement | null = this._from!.querySelector<HTMLDivElement>(step);
       if (!divEl) {
         return;
       }
@@ -75,40 +90,41 @@ export class MultiStepFormComponent {
   }
 
   private updateStepRequiredInputs(step: string): void {
-    const divEl: HTMLDivElement | null = document.querySelector<HTMLDivElement>(step);
+    const divEl: HTMLDivElement | null = this._from!.querySelector<HTMLDivElement>(step);
     if (!divEl) {
       return;
     }
     this._currentRequiredInputs = [];
     divEl
-      .querySelectorAll('input[required]')
+      .querySelectorAll('input[required], textarea[required]')
       .forEach((value) => this._currentRequiredInputs.push(value as HTMLInputElement));
   }
 
   private hideFieldError(input: HTMLInputElement): void {
     const nextTooltip: HTMLDivElement | null = input.nextElementSibling?.classList.contains(
-      'tooltip'
+      'invalid-field-tooltip'
     )
       ? (input.nextElementSibling as HTMLDivElement)
       : null;
 
     if (nextTooltip) {
-      nextTooltip.style.display = 'none';
+      nextTooltip.remove();
       input.style.border = '1px solid #f1f1f1';
     }
   }
 
-  private showFieldError(input: HTMLInputElement): void {
-    const isNextTooltip: boolean | undefined =
-      input.nextElementSibling?.classList.contains('tooltip');
-    if (!isNextTooltip) {
-      const divTooltip: Node = createElementFromHTML(
-        '<div class="tooltip">Ce champs est requis</div>'
-      );
-      insertAfter(input, divTooltip);
-    } else {
-      (input.nextElementSibling as HTMLDivElement).style.display = 'block';
-    }
+  private showFieldError(
+    input: HTMLInputElement,
+    errorType: FieldErrorType = FieldErrorType.EMPTY
+  ): void {
+    const divTooltip: Node = createElementFromHTML(
+      `<div class="invalid-field-tooltip">${
+        errorType === FieldErrorType.NOT_EMAIL_FORMAT
+          ? "Format d'email valide requis"
+          : 'Ce champs est requis'
+      }</div>`
+    );
+    insertAfter(input, divTooltip);
     input.style.border = '1px solid red';
   }
 
@@ -117,9 +133,15 @@ export class MultiStepFormComponent {
     let isFormStepValid = true;
 
     this._currentRequiredInputs.forEach((input: HTMLInputElement) => {
-      if (input.value.trim() === '') {
+      const isEmail: string | null = input.getAttribute('is-email');
+      const inputValue = input.value.trim();
+
+      if (inputValue === '') {
         isFormStepValid = false;
-        this.showFieldError(input);
+        this.showFieldError(input, FieldErrorType.EMPTY);
+      } else if (isEmail && !validateEmail(inputValue)) {
+        isFormStepValid = false;
+        this.showFieldError(input, FieldErrorType.NOT_EMAIL_FORMAT);
       } else {
         this.hideFieldError(input);
       }
