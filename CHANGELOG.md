@@ -1,5 +1,11 @@
 # @webflow-enzo-chantereault/support-contact
 
+## 2.0.1
+
+### Patch Changes
+
+- 823f25d: fix previous step and errors were not reset
+
 ## 2.0.0
 
 ### Major Changes
