@@ -67,6 +67,7 @@ export class MultiStepFormComponent {
         this.currentStep--;
         this.showStep();
         this._currentRequiredInputs.forEach((input) => {
+          this.hideFieldError(input);
           input.removeEventListener('focus', () => {
             this.hideFieldError(input);
           });
